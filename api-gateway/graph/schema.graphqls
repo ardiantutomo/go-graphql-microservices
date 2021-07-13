@@ -1,0 +1,19 @@
+type User {
+  fullname: String!
+  email: String!
+  password: String!
+}
+
+input UserInput {
+  fullname: String!
+  email: String!
+  password: String!
+}
+scalar Void
+type Mutation {
+  CreateUser(input: UserInput!): Void!
+}
+
+type Query {
+  GetAllUsers: [User!]!
+}

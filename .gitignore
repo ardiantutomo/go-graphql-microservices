@@ -1,0 +1,6 @@
+user-service/variables/variables.go
+role-permission-service/variables/variables.go
+api-gateway/variables/variables.go
+auth-service/variables/variables.go
+
+
