@@ -10,6 +10,7 @@ import (
 	"user-service/service"
 
 	"github.com/segmentio/kafka-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserController : represent the user's controller contract
@@ -45,7 +46,6 @@ func (u userController) GetAllUser() {
 		log.Fatal("encode error:", err)
 	}
 	log.Print("[UserController]...Sending response")
-	fmt.Println(userData.Bytes())
 	kafka_handler.SendToKafka(u.kafkaWriter, []byte("get-all-user-response"), userData.Bytes())
 }
 
@@ -55,8 +55,15 @@ func (u userController) AddUser(userData []byte) {
 	data := bytes.NewBuffer(userData)
 	dec := gob.NewDecoder(data)
 	err := dec.Decode(&user)
+	password := []byte(user.Password)
+	hashedPassword, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	user.Password = string(hashedPassword)
 	user, err = u.userService.Save(user)
 	if err != nil {
+		fmt.Println(err)
 		kafka_handler.SendToKafka(u.kafkaWriter, []byte("create-user-error"), []byte("Failed to create user"))
 		return
 	}

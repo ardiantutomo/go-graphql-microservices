@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"fmt"
 	"log"
 )
 
@@ -22,8 +21,19 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.UserInput
 		log.Fatal("encode error:", err)
 	}
 	log.Print("[CreateUser]...Sending request")
-	kafka_handler.SendToKafka("user-topic", "create-user", string(userData.Bytes()))
-	return "User created", err
+	kafka_handler.SendToKafka("user-topic", "create-user", userData.String())
+	kafkaReader := kafka_handler.NewKafkaReader("user-topic-response", "user-group")
+	for {
+		m, err := kafkaReader.ReadMessage(context.Background())
+		if err != nil {
+			log.Fatal("error:", err)
+			break
+		}
+		if string(m.Key) == "create-user-error" || string(m.Key) == "create-user-response" {
+			return string(m.Value), err
+		}
+	}
+	return "-", err
 }
 
 func (r *queryResolver) GetAllUsers(ctx context.Context) ([]*model.User, error) {
@@ -42,12 +52,14 @@ func (r *queryResolver) GetAllUsers(ctx context.Context) ([]*model.User, error) 
 			data := bytes.NewBuffer(m.Value)
 			dec := gob.NewDecoder(data)
 			var users []model.User
-			r.users = []*model.User{}
+			// r.users = []*model.User{}
 			err = dec.Decode(&users)
-			for _, x := range users {
-				r.users = append(r.users, &x)
+			userStruct := make([]*model.User, len(users))
+
+			for i := range userStruct {
+				userStruct[i] = &users[i]
 			}
-			fmt.Println(m.Value)
+			r.users = userStruct
 			return r.users, err
 		}
 	}

@@ -33,11 +33,12 @@ func NewKafkaWriter(topic string) *kafka.Writer {
 }
 
 func NewKafkaReader(topic string) *kafka.Reader {
-	return kafka.NewReader(kafka.ReaderConfig{
+	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{variables.KAFKA_HOST},
 		Topic:    topic,
-		// GroupID:  variables.KAFKA_GROUP,
 		MinBytes: 0,    // 0
 		MaxBytes: 10e6, // 10MB
 	})
+	r.SetOffset(kafka.LastOffset)
+	return r
 }
